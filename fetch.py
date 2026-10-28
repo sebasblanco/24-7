@@ -1,5 +1,5 @@
 """
-Pulls live data for The Tape from three free, public, no-auth-required APIs:
+Pulls live data for 24/7 from three free, public, no-auth-required APIs:
 - Kalshi (prediction markets, economics/politics/world/elections)
 - Polymarket (prediction markets, keyword-filtered for econ/politics relevance)
 - Frankfurter (FX rates, ECB reference data, indexed-to-100 trailing year)

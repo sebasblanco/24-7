@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------------------
-   The Tape — design tokens
+   24/7 — design tokens
    Light is the base; dark overrides under both the OS media query and an
    explicit [data-theme="dark"] toggle (none wired yet, tokens future-proof it).
    Categorical palette = dataviz skill default, slots 1-5, validated via
