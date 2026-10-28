@@ -157,11 +157,6 @@ a { color: var(--series-1); }
   font-size: 0.85rem;
   line-height: 1.3;
   margin: 4px 0 10px;
-  min-height: 2.6em;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 .ticker-stats {
   display: flex;
@@ -207,8 +202,32 @@ a { color: var(--series-1); }
 }
 .toggle-btn:hover { background: var(--border); }
 
+.fx-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+.fx-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+.fx-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-bottom: 8px;
+}
+.fx-card-id { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.fx-card-swatch { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+.fx-card-title { font-size: 0.82rem; color: var(--text-secondary); }
+.fx-card-now { font-family: var(--font-mono); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
 .viz-root { position: relative; width: 100%; }
-#fxChart { width: 100%; height: auto; display: block; overflow: visible; }
+.fx-mini-chart { width: 100%; height: auto; display: block; overflow: visible; }
 
 .fx-tooltip {
   position: absolute;
@@ -227,17 +246,6 @@ a { color: var(--series-1); }
 .fx-tooltip .tt-row { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
 .fx-tooltip .tt-key { width: 12px; height: 2px; display: inline-block; }
 .fx-tooltip .tt-val { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 600; margin-left: auto; }
-
-.fx-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 12px;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
-.fx-legend-item { display: flex; align-items: center; gap: 6px; }
-.fx-legend-swatch { width: 14px; height: 2px; display: inline-block; border-radius: 2px; }
 
 .fx-table-wrap { margin-top: 14px; overflow-x: auto; }
 .fx-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }

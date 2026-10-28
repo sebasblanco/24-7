@@ -30,8 +30,8 @@
 
   <section class="fx-section" aria-label="Currency exchange rates">
     <div class="fx-head">
-      <h2>Currency Exchange — Indexed to 100</h2>
-      <p class="section-sub">USD vs. five major currencies over the trailing year. Each line starts at 100 one year ago, so a move in yen and a move in pesos sit on the same scale.</p>
+      <h2>Currency Exchange</h2>
+      <p class="section-sub">USD vs. five major currencies over the trailing year — actual exchange rates, each on its own scale since a yen and a euro aren't comparable numbers.</p>
     </div>
 
     <div class="chart-card">
@@ -39,11 +39,7 @@
         <div id="fxAsOf" class="chart-asof"></div>
         <button id="fxTableToggle" class="toggle-btn" type="button" aria-pressed="false">View as table</button>
       </div>
-      <div id="fxChartWrap" class="viz-root">
-        <svg id="fxChart" role="img" aria-label="Indexed currency exchange chart"></svg>
-        <div id="fxTooltip" class="fx-tooltip" hidden></div>
-      </div>
-      <div id="fxLegend" class="fx-legend" aria-hidden="true"></div>
+      <div id="fxChartsGrid" class="fx-grid"></div>
       <div id="fxTable" class="fx-table-wrap" hidden></div>
     </div>
   </section>

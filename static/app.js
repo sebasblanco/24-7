@@ -101,8 +101,10 @@
     return Math.round(n).toString();
   }
 
-  // ------------------------------ FX chart ------------------------------
+  // ------------------------------ FX charts (small multiples) ------------------------------
   var fxState = { dates: [], series: {}, pairs: [] };
+  var FX_DECIMALS = { JPY: 2 };
+  function decimalsFor(ccy) { return FX_DECIMALS[ccy] != null ? FX_DECIMALS[ccy] : 4; }
 
   function buildFxChart(fx) {
     var pairs = Object.keys(fx.series || {});
@@ -110,31 +112,219 @@
 
     setText(document.getElementById("fxAsOf"), fx.as_of ? "As of " + fx.as_of : "");
 
-    renderLegend(pairs);
     renderTable(fx.table || []);
-    drawChart();
+    renderFxGrid();
 
-    window.addEventListener("resize", debounce(drawChart, 150));
+    window.addEventListener("resize", debounce(renderFxGrid, 150));
   }
 
-  function renderLegend(pairs) {
-    var legend = document.getElementById("fxLegend");
-    legend.innerHTML = "";
-    pairs.forEach(function (ccy, i) {
-      var item = document.createElement("div");
-      item.className = "fx-legend-item";
-
-      var sw = document.createElement("span");
-      sw.className = "fx-legend-swatch";
-      sw.style.background = cssVar(SERIES_VARS[i % SERIES_VARS.length]);
-      item.appendChild(sw);
-
-      var label = document.createElement("span");
-      setText(label, ccy + " — " + (CCY_NAMES[ccy] || ""));
-      item.appendChild(label);
-
-      legend.appendChild(item);
+  function renderFxGrid() {
+    var grid = document.getElementById("fxChartsGrid");
+    grid.innerHTML = "";
+    fxState.pairs.forEach(function (ccy, i) {
+      grid.appendChild(buildFxCard(ccy, i));
     });
+  }
+
+  function lastValue(vals) {
+    for (var i = vals.length - 1; i >= 0; i--) {
+      if (vals[i] != null) return vals[i];
+    }
+    return null;
+  }
+
+  function buildFxCard(ccy, i) {
+    var vals = fxState.series[ccy] || [];
+    var color = cssVar(SERIES_VARS[i % SERIES_VARS.length]);
+    var decimals = decimalsFor(ccy);
+
+    var card = document.createElement("div");
+    card.className = "fx-card";
+
+    var head = document.createElement("div");
+    head.className = "fx-card-head";
+
+    var idWrap = document.createElement("div");
+    idWrap.className = "fx-card-id";
+    var swatch = document.createElement("span");
+    swatch.className = "fx-card-swatch";
+    swatch.style.background = color;
+    idWrap.appendChild(swatch);
+    var titleEl = document.createElement("span");
+    titleEl.className = "fx-card-title";
+    setText(titleEl, "USD → " + ccy + " (" + (CCY_NAMES[ccy] || "") + ")");
+    idWrap.appendChild(titleEl);
+    head.appendChild(idWrap);
+
+    var nowEl = document.createElement("span");
+    nowEl.className = "fx-card-now";
+    var lv = lastValue(vals);
+    setText(nowEl, lv == null ? "—" : lv.toFixed(decimals));
+    head.appendChild(nowEl);
+
+    card.appendChild(head);
+
+    var vizRoot = document.createElement("div");
+    vizRoot.className = "viz-root";
+    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", ccy + " exchange rate over the trailing year");
+    svg.setAttribute("class", "fx-mini-chart");
+    vizRoot.appendChild(svg);
+
+    var tooltip = document.createElement("div");
+    tooltip.className = "fx-tooltip";
+    tooltip.hidden = true;
+    vizRoot.appendChild(tooltip);
+
+    card.appendChild(vizRoot);
+
+    drawMiniChart(svg, tooltip, fxState.dates, vals, color, decimals, ccy);
+
+    return card;
+  }
+
+  var MINI_PAD = { left: 8, right: 50, top: 12, bottom: 20 };
+  var MINI_VB_W = 420, MINI_VB_H = 170;
+
+  function drawMiniChart(svg, tooltip, dates, vals, color, decimals, ccy) {
+    var n = dates.length;
+    svg.setAttribute("viewBox", "0 0 " + MINI_VB_W + " " + MINI_VB_H);
+    svg.innerHTML = "";
+    if (!n) return;
+
+    var present = [];
+    vals.forEach(function (v) { if (v != null) present.push(v); });
+    if (!present.length) return;
+
+    var min = Math.min.apply(null, present);
+    var max = Math.max.apply(null, present);
+    var span = max - min || Math.abs(max || 1) * 0.01;
+    min -= span * 0.12;
+    max += span * 0.12;
+
+    var plotW = MINI_VB_W - MINI_PAD.left - MINI_PAD.right;
+    var plotH = MINI_VB_H - MINI_PAD.top - MINI_PAD.bottom;
+
+    function xAt(idx) { return MINI_PAD.left + (n <= 1 ? 0 : (idx / (n - 1)) * plotW); }
+    function yAt(v) { return MINI_PAD.top + plotH - ((v - min) / (max - min)) * plotH; }
+
+    var ns = "http://www.w3.org/2000/svg";
+    function el(tag, attrs) {
+      var e = document.createElementNS(ns, tag);
+      for (var k in attrs) e.setAttribute(k, attrs[k]);
+      return e;
+    }
+
+    var gridColor = cssVar("--border");
+    var ticks = 3;
+    for (var t = 0; t <= ticks; t++) {
+      var v = min + (max - min) * (t / ticks);
+      var y = yAt(v);
+      svg.appendChild(el("line", {
+        x1: MINI_PAD.left, x2: MINI_VB_W - MINI_PAD.right, y1: y, y2: y,
+        stroke: gridColor, "stroke-width": 1,
+      }));
+      var txt = el("text", {
+        x: MINI_VB_W - MINI_PAD.right + 6, y: y + 3, fill: cssVar("--text-muted"),
+        "font-size": 9, "font-family": "var(--font-mono)",
+      });
+      txt.textContent = v.toFixed(Math.min(decimals, 2));
+      svg.appendChild(txt);
+    }
+
+    var d = "";
+    var lastPt = null;
+    for (var j = 0; j < vals.length; j++) {
+      if (vals[j] == null) continue;
+      var x = xAt(j), y2 = yAt(vals[j]);
+      d += (d ? "L" : "M") + x.toFixed(2) + "," + y2.toFixed(2);
+      lastPt = { x: x, y: y2 };
+    }
+    if (d) {
+      svg.appendChild(el("path", {
+        d: d, fill: "none", stroke: color, "stroke-width": 2,
+        "stroke-linecap": "round", "stroke-linejoin": "round",
+      }));
+    }
+
+    var surface = cssVar("--surface-1");
+    if (lastPt) {
+      svg.appendChild(el("circle", {
+        cx: lastPt.x, cy: lastPt.y, r: 5, fill: surface, stroke: color, "stroke-width": 2,
+      }));
+    }
+
+    var crosshair = el("line", {
+      x1: 0, x2: 0, y1: MINI_PAD.top, y2: MINI_VB_H - MINI_PAD.bottom,
+      stroke: cssVar("--text-muted"), "stroke-width": 1, "stroke-dasharray": "2,3",
+      opacity: 0,
+    });
+    svg.appendChild(crosshair);
+
+    var hit = el("rect", {
+      x: MINI_PAD.left, y: MINI_PAD.top, width: plotW, height: plotH,
+      fill: "transparent", style: "cursor:crosshair",
+    });
+    hit.setAttribute("tabindex", "0");
+    svg.appendChild(hit);
+
+    function showAtIndex(idx) {
+      idx = Math.max(0, Math.min(n - 1, idx));
+      var x = xAt(idx);
+      crosshair.setAttribute("x1", x);
+      crosshair.setAttribute("x2", x);
+      crosshair.setAttribute("opacity", 1);
+
+      var v = vals[idx];
+      tooltip.innerHTML = "";
+      var dateRow = document.createElement("div");
+      dateRow.className = "tt-date";
+      setText(dateRow, dates[idx]);
+      tooltip.appendChild(dateRow);
+
+      var row = document.createElement("div");
+      row.className = "tt-row";
+      var key = document.createElement("span");
+      key.className = "tt-key";
+      key.style.background = color;
+      row.appendChild(key);
+      var name = document.createElement("span");
+      setText(name, ccy);
+      row.appendChild(name);
+      var val = document.createElement("span");
+      val.className = "tt-val";
+      setText(val, v == null ? "—" : v.toFixed(decimals));
+      row.appendChild(val);
+      tooltip.appendChild(row);
+
+      var rect = svg.getBoundingClientRect();
+      var px = rect.left + (x / MINI_VB_W) * rect.width;
+      var py = rect.top + (yAt(v == null ? (min + max) / 2 : v) / MINI_VB_H) * rect.height;
+      tooltip.style.left = (px - rect.left) + "px";
+      tooltip.style.top = (py - rect.top) + "px";
+      tooltip.hidden = false;
+    }
+
+    function hideTooltip() {
+      crosshair.setAttribute("opacity", 0);
+      tooltip.hidden = true;
+    }
+
+    hit.addEventListener("pointermove", function (ev) {
+      var rect = svg.getBoundingClientRect();
+      var relX = (ev.clientX - rect.left) / rect.width * MINI_VB_W;
+      var idx = Math.round(((relX - MINI_PAD.left) / plotW) * (n - 1));
+      showAtIndex(idx);
+    });
+    hit.addEventListener("pointerleave", hideTooltip);
+
+    var kbIndex = n - 1;
+    hit.addEventListener("keydown", function (ev) {
+      if (ev.key === "ArrowLeft") { kbIndex = Math.max(0, kbIndex - 1); showAtIndex(kbIndex); ev.preventDefault(); }
+      else if (ev.key === "ArrowRight") { kbIndex = Math.min(n - 1, kbIndex + 1); showAtIndex(kbIndex); ev.preventDefault(); }
+    });
+    hit.addEventListener("blur", hideTooltip);
   }
 
   function renderTable(rows) {
@@ -177,174 +367,6 @@
     wrap.appendChild(table);
   }
 
-  var PAD = { left: 10, right: 58, top: 16, bottom: 26 };
-  var VB_W = 880, VB_H = 320;
-
-  function drawChart() {
-    var svg = document.getElementById("fxChart");
-    var dates = fxState.dates, pairs = fxState.pairs, series = fxState.series;
-    if (!dates.length || !pairs.length) return;
-
-    svg.setAttribute("viewBox", "0 0 " + VB_W + " " + VB_H);
-    svg.innerHTML = "";
-
-    var allVals = [];
-    pairs.forEach(function (ccy) {
-      (series[ccy] || []).forEach(function (v) { if (v != null) allVals.push(v); });
-    });
-    var min = Math.min.apply(null, allVals.concat([100]));
-    var max = Math.max.apply(null, allVals.concat([100]));
-    var span = max - min || 1;
-    min -= span * 0.08;
-    max += span * 0.08;
-
-    var plotW = VB_W - PAD.left - PAD.right;
-    var plotH = VB_H - PAD.top - PAD.bottom;
-    var n = dates.length;
-
-    function xAt(i) { return PAD.left + (n <= 1 ? 0 : (i / (n - 1)) * plotW); }
-    function yAt(v) { return PAD.top + plotH - ((v - min) / (max - min)) * plotH; }
-
-    var ns = "http://www.w3.org/2000/svg";
-    function el(tag, attrs) {
-      var e = document.createElementNS(ns, tag);
-      for (var k in attrs) e.setAttribute(k, attrs[k]);
-      return e;
-    }
-
-    // Gridlines (horizontal, hairline, recessive) + baseline at 100
-    var gridColor = cssVar("--border");
-    var ticks = 4;
-    for (var t = 0; t <= ticks; t++) {
-      var v = min + (max - min) * (t / ticks);
-      var y = yAt(v);
-      svg.appendChild(el("line", {
-        x1: PAD.left, x2: VB_W - PAD.right, y1: y, y2: y,
-        stroke: gridColor, "stroke-width": 1,
-      }));
-      var txt = el("text", {
-        x: VB_W - PAD.right + 8, y: y + 3, fill: cssVar("--text-muted"),
-        "font-size": 10, "font-family": "var(--font-mono)",
-      });
-      txt.textContent = Math.round(v);
-      svg.appendChild(txt);
-    }
-
-    // Series lines
-    var endDots = [];
-    pairs.forEach(function (ccy, i) {
-      var vals = series[ccy] || [];
-      var color = cssVar(SERIES_VARS[i % SERIES_VARS.length]);
-      var d = "";
-      var lastPt = null;
-      for (var j = 0; j < vals.length; j++) {
-        if (vals[j] == null) continue;
-        var x = xAt(j), y = yAt(vals[j]);
-        d += (d ? "L" : "M") + x.toFixed(2) + "," + y.toFixed(2);
-        lastPt = { x: x, y: y, v: vals[j] };
-      }
-      if (d) {
-        svg.appendChild(el("path", {
-          d: d, fill: "none", stroke: color, "stroke-width": 2,
-          "stroke-linecap": "round", "stroke-linejoin": "round",
-        }));
-      }
-      if (lastPt) {
-        endDots.push({ ccy: ccy, color: color, pt: lastPt });
-      }
-    });
-
-    // End dots (8px, surface ring) + direct labels (text-secondary, never series color)
-    var surface = cssVar("--surface-1");
-    endDots.forEach(function (e2) {
-      svg.appendChild(el("circle", {
-        cx: e2.pt.x, cy: e2.pt.y, r: 6, fill: surface, stroke: e2.color, "stroke-width": 2,
-      }));
-      var label = el("text", {
-        x: e2.pt.x + 10, y: e2.pt.y + 4, fill: cssVar("--text-secondary"),
-        "font-size": 11, "font-family": "var(--font-mono)", "font-weight": 600,
-      });
-      label.textContent = e2.ccy;
-      svg.appendChild(label);
-    });
-
-    // Hover layer: crosshair + wide hit rect
-    var crosshair = el("line", {
-      x1: 0, x2: 0, y1: PAD.top, y2: VB_H - PAD.bottom,
-      stroke: cssVar("--text-muted"), "stroke-width": 1, "stroke-dasharray": "2,3",
-      opacity: 0,
-    });
-    svg.appendChild(crosshair);
-
-    var hit = el("rect", {
-      x: PAD.left, y: PAD.top, width: plotW, height: plotH,
-      fill: "transparent", style: "cursor:crosshair",
-    });
-    hit.setAttribute("tabindex", "0");
-    svg.appendChild(hit);
-
-    var tooltip = document.getElementById("fxTooltip");
-
-    function showAtIndex(idx) {
-      idx = Math.max(0, Math.min(n - 1, idx));
-      var x = xAt(idx);
-      crosshair.setAttribute("x1", x);
-      crosshair.setAttribute("x2", x);
-      crosshair.setAttribute("opacity", 1);
-
-      tooltip.innerHTML = "";
-      var dateRow = document.createElement("div");
-      dateRow.className = "tt-date";
-      setText(dateRow, dates[idx]);
-      tooltip.appendChild(dateRow);
-
-      pairs.forEach(function (ccy, i) {
-        var v = (series[ccy] || [])[idx];
-        var row = document.createElement("div");
-        row.className = "tt-row";
-        var key = document.createElement("span");
-        key.className = "tt-key";
-        key.style.background = cssVar(SERIES_VARS[i % SERIES_VARS.length]);
-        row.appendChild(key);
-        var name = document.createElement("span");
-        setText(name, ccy);
-        row.appendChild(name);
-        var val = document.createElement("span");
-        val.className = "tt-val";
-        setText(val, v == null ? "—" : v.toFixed(1));
-        row.appendChild(val);
-        tooltip.appendChild(row);
-      });
-
-      var rect = svg.getBoundingClientRect();
-      var px = rect.left + (x / VB_W) * rect.width;
-      var py = rect.top + (yAt(100) / VB_H) * rect.height;
-      tooltip.style.left = (px - rect.left) + "px";
-      tooltip.style.top = (py - rect.top) + "px";
-      tooltip.hidden = false;
-    }
-
-    function hideTooltip() {
-      crosshair.setAttribute("opacity", 0);
-      tooltip.hidden = true;
-    }
-
-    hit.addEventListener("pointermove", function (ev) {
-      var rect = svg.getBoundingClientRect();
-      var relX = (ev.clientX - rect.left) / rect.width * VB_W;
-      var idx = Math.round(((relX - PAD.left) / plotW) * (n - 1));
-      showAtIndex(idx);
-    });
-    hit.addEventListener("pointerleave", hideTooltip);
-
-    var kbIndex = n - 1;
-    hit.addEventListener("keydown", function (ev) {
-      if (ev.key === "ArrowLeft") { kbIndex = Math.max(0, kbIndex - 1); showAtIndex(kbIndex); ev.preventDefault(); }
-      else if (ev.key === "ArrowRight") { kbIndex = Math.min(n - 1, kbIndex + 1); showAtIndex(kbIndex); ev.preventDefault(); }
-    });
-    hit.addEventListener("blur", hideTooltip);
-  }
-
   function debounce(fn, ms) {
     var t;
     return function () {
@@ -355,20 +377,17 @@
 
   // ------------------------------ Table toggle ------------------------------
   document.getElementById("fxTableToggle").addEventListener("click", function () {
-    var chartWrap = document.getElementById("fxChartWrap");
-    var legend = document.getElementById("fxLegend");
+    var grid = document.getElementById("fxChartsGrid");
     var table = document.getElementById("fxTable");
     var showingTable = !table.hidden;
     if (showingTable) {
       table.hidden = true;
-      chartWrap.hidden = false;
-      legend.hidden = false;
+      grid.hidden = false;
       this.textContent = "View as table";
       this.setAttribute("aria-pressed", "false");
     } else {
       table.hidden = false;
-      chartWrap.hidden = true;
-      legend.hidden = true;
+      grid.hidden = true;
       this.textContent = "View as chart";
       this.setAttribute("aria-pressed", "true");
     }
