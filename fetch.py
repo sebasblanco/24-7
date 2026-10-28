@@ -48,21 +48,28 @@ POLY_KEYWORDS = [
 
 FX_PAIRS = ["EUR", "JPY", "MXN", "GBP", "CNY"]
 
-# Curated RSS feeds, not a news API — avoids key limits/paywalls. Mix of
-# world/politics breadth (BBC, Guardian, Al Jazeera) and an economics-specific
-# source (BBC Business, plus the Fed's own press releases, which pair
-# naturally with the Kalshi Fed-rate markets above). MarketWatch was tried
-# and dropped: its general "topstories" feed mixes in personal-finance
-# advice-column clickbait, and its more on-theme "marketpulse" feed turned
-# out to be dead (stuck on mid-2025 content as of this writing).
+# Curated RSS feeds, not a news API — avoids key limits/paywalls.
+#
+# Using BBC's front-page feed rather than its "World" category feed: BBC's
+# category feeds are pure reverse-chronological, so a high-volume outlet's
+# flood of minor updates can crowd a genuinely major story (e.g. a fatal
+# train crash) out of a merged top-N-by-recency list even though it's still
+# technically "recent." The front-page feed is BBC's own editorial importance
+# ranking, not just a timestamp sort — confirmed 2026-10-28 that it surfaces
+# major breaking stories near the top in a way the category feed, merged
+# across sources, did not. BBC's "Business" category feed was dropped for a
+# similar reason from the other direction: it mixes real business news with
+# personal-finance/lifestyle advice columns ("you may get the right to find
+# out what your colleagues earn"), which isn't "important news," just noise
+# that happened to be recent. MarketWatch was tried earlier and dropped too
+# (general feed = same clickbait problem; its more on-theme feed is dead).
 HEADLINE_FEEDS = [
-    ("BBC World", "http://feeds.bbci.co.uk/news/world/rss.xml"),
-    ("BBC Business", "http://feeds.bbci.co.uk/news/business/rss.xml"),
+    ("BBC", "http://feeds.bbci.co.uk/news/rss.xml"),
     ("The Guardian", "https://www.theguardian.com/world/rss"),
     ("Al Jazeera", "https://www.aljazeera.com/xml/rss/all.xml"),
     ("Federal Reserve", "https://www.federalreserve.gov/feeds/press_all.xml"),
 ]
-HEADLINES_PER_FEED = 8
+HEADLINES_PER_FEED = 10
 HEADLINES_TOTAL = 20
 
 
@@ -252,6 +259,13 @@ def _fetch_one_feed(source, url):
     return out
 
 
+def _title_key(title):
+    """Loose normalization so near-identical titles from different feeds
+    (same story, slightly different wording) collapse to one entry."""
+    words = "".join(c.lower() if c.isalnum() else " " for c in title).split()
+    return " ".join(words[:7])
+
+
 def fetch_headlines():
     """Most recent headlines merged across curated RSS feeds. One slow or
     dead feed shouldn't blank the whole section — each feed fails on its
@@ -261,9 +275,18 @@ def fetch_headlines():
         all_items.extend(_fetch_one_feed(source, url))
 
     all_items.sort(key=lambda h: h["_sort_key"], reverse=True)
+
+    seen = set()
+    deduped = []
     for h in all_items:
+        key = _title_key(h["title"])
+        if key in seen:
+            continue
+        seen.add(key)
         del h["_sort_key"]
-    return all_items[:HEADLINES_TOTAL]
+        deduped.append(h)
+
+    return deduped[:HEADLINES_TOTAL]
 
 
 def build_snapshot():
