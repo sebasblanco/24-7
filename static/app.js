@@ -94,6 +94,60 @@
     });
   }
 
+  // --------------------------- Headlines --------------------------------
+  function relativeTime(iso) {
+    if (!iso) return "";
+    var then = new Date(iso).getTime();
+    if (isNaN(then)) return "";
+    var mins = Math.round((Date.now() - then) / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return mins + "m ago";
+    var hrs = Math.round(mins / 60);
+    if (hrs < 24) return hrs + "h ago";
+    var days = Math.round(hrs / 24);
+    return days + "d ago";
+  }
+
+  function renderHeadlines(headlines) {
+    var list = document.getElementById("headlinesList");
+    list.innerHTML = "";
+
+    if (!headlines || !headlines.length) {
+      var empty = document.createElement("li");
+      empty.className = "headlines-loading";
+      empty.textContent = "No headlines available right now — try reloading in a few minutes.";
+      list.appendChild(empty);
+      return;
+    }
+
+    headlines.forEach(function (h) {
+      var li = document.createElement("li");
+      li.className = "headline-item";
+
+      var meta = document.createElement("div");
+      meta.className = "headline-meta";
+      var src = document.createElement("span");
+      src.className = "hl-source";
+      setText(src, h.source || "");
+      meta.appendChild(src);
+      var time = document.createElement("span");
+      time.className = "hl-time";
+      setText(time, relativeTime(h.published));
+      meta.appendChild(time);
+      li.appendChild(meta);
+
+      var a = document.createElement("a");
+      a.className = "headline-title";
+      a.href = h.url || "#";
+      a.target = "_blank";
+      a.rel = "noopener";
+      setText(a, h.title || "");
+      li.appendChild(a);
+
+      list.appendChild(li);
+    });
+  }
+
   function compactNumber(n) {
     n = n || 0;
     if (n >= 1e6) return (n / 1e6).toFixed(1) + "M";
@@ -404,6 +458,7 @@
     .then(function (r) { return r.json(); })
     .then(function (data) {
       renderTicker(data.kalshi, data.polymarket);
+      renderHeadlines(data.headlines);
       buildFxChart(data.fx || {});
       var genDate = new Date(data.generated_at * 1000);
       setText(document.getElementById("generatedAt"), "Snapshot generated " + genDate.toLocaleString());

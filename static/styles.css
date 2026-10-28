@@ -172,6 +172,42 @@ a { color: var(--series-1); }
 .ticker-vol { font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; }
 .ticker-loading { padding: 20px; color: var(--text-muted); font-size: 0.9rem; }
 
+/* --------------------------- Headlines --------------------------------- */
+.headlines-section { padding: 22px 20px; max-width: 1100px; margin: 0 auto; }
+.headlines-head h2 { margin: 0 0 2px; font-size: 1.15rem; }
+
+.headlines-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+.headline-item {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 11px 2px;
+  border-bottom: 1px solid var(--border);
+}
+.headline-meta {
+  flex: 0 0 auto;
+  width: 112px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.headline-meta .hl-source { display: block; text-transform: uppercase; letter-spacing: 0.04em; }
+.headline-meta .hl-time { display: block; }
+.headline-title {
+  font-size: 0.92rem;
+  line-height: 1.35;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+.headline-title:hover, .headline-title:focus-visible { text-decoration: underline; }
+.headlines-loading { padding: 16px 2px; color: var(--text-muted); font-size: 0.9rem; list-style: none; }
+
 /* ----------------------------- FX chart -------------------------------- */
 .fx-section { padding: 10px 20px 36px; max-width: 1100px; margin: 0 auto; }
 .fx-head h2 { margin: 0 0 2px; font-size: 1.15rem; }
@@ -272,8 +308,10 @@ a { color: var(--series-1); }
 @media (max-width: 480px) {
   .ticker-item { width: 190px; }
   .masthead { padding: 22px 16px 14px; }
-  .ticker-section, .fx-section, .site-footer { padding-left: 16px; padding-right: 16px; }
+  .ticker-section, .fx-section, .headlines-section, .site-footer { padding-left: 16px; padding-right: 16px; }
   .chart-card { padding: 12px; }
+  .headline-item { flex-direction: column; gap: 3px; }
+  .headline-meta { width: auto; display: flex; gap: 8px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

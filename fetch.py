@@ -2,17 +2,20 @@
 Pulls live data for 24/7 from three free, public, no-auth-required APIs:
 - Kalshi (prediction markets, economics/politics/world/elections)
 - Polymarket (prediction markets, keyword-filtered for econ/politics relevance)
-- Frankfurter (FX rates, ECB reference data, indexed-to-100 trailing year)
+- Frankfurter (FX rates, ECB reference data, actual trailing-year daily rates)
 
 No API keys needed for any of these. Keep this module side-effect-free aside
 from outbound HTTP — server.py owns the caching layer.
 """
 import time
+import xml.etree.ElementTree as ET
 from datetime import date, timedelta
+from email.utils import parsedate_to_datetime
 
 import requests
 
 TIMEOUT = 8
+HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; 24-7-dashboard/1.0)"}
 
 KALSHI_BASE = "https://external-api.kalshi.com/trade-api/v2"
 POLY_BASE = "https://gamma-api.polymarket.com"
@@ -44,6 +47,23 @@ POLY_KEYWORDS = [
 ]
 
 FX_PAIRS = ["EUR", "JPY", "MXN", "GBP", "CNY"]
+
+# Curated RSS feeds, not a news API — avoids key limits/paywalls. Mix of
+# world/politics breadth (BBC, Guardian, Al Jazeera) and an economics-specific
+# source (BBC Business, plus the Fed's own press releases, which pair
+# naturally with the Kalshi Fed-rate markets above). MarketWatch was tried
+# and dropped: its general "topstories" feed mixes in personal-finance
+# advice-column clickbait, and its more on-theme "marketpulse" feed turned
+# out to be dead (stuck on mid-2025 content as of this writing).
+HEADLINE_FEEDS = [
+    ("BBC World", "http://feeds.bbci.co.uk/news/world/rss.xml"),
+    ("BBC Business", "http://feeds.bbci.co.uk/news/business/rss.xml"),
+    ("The Guardian", "https://www.theguardian.com/world/rss"),
+    ("Al Jazeera", "https://www.aljazeera.com/xml/rss/all.xml"),
+    ("Federal Reserve", "https://www.federalreserve.gov/feeds/press_all.xml"),
+]
+HEADLINES_PER_FEED = 8
+HEADLINES_TOTAL = 20
 
 
 def _safe_float(x, default=0.0):
@@ -143,7 +163,7 @@ def fetch_polymarket():
 
 
 def fetch_fx():
-    """Trailing-year daily FX series per pair, indexed to 100 at the oldest point."""
+    """Trailing-year daily FX series per pair, actual rates (not indexed)."""
     end = date.today()
     start = end - timedelta(days=365)
     try:
@@ -167,10 +187,7 @@ def fetch_fx():
     for d in dates:
         day = rates_by_date[d]
         for ccy in FX_PAIRS:
-            if ccy in day and ccy in baseline and baseline[ccy]:
-                series[ccy].append(round(day[ccy] / baseline[ccy] * 100, 3))
-            else:
-                series[ccy].append(None)
+            series[ccy].append(day[ccy] if ccy in day else None)
 
     latest = rates_by_date[dates[-1]]
 
@@ -195,10 +212,65 @@ def fetch_fx():
     }
 
 
+def _parse_rss_date(raw):
+    if not raw:
+        return None
+    try:
+        return parsedate_to_datetime(raw.strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def _fetch_one_feed(source, url):
+    out = []
+    try:
+        r = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
+        r.raise_for_status()
+        root = ET.fromstring(r.content)
+    except (requests.RequestException, ET.ParseError):
+        return out
+
+    # RSS 2.0 shape: rss > channel > item*. Every feed here confirmed RSS 2.0
+    # (not Atom) before being added to HEADLINE_FEEDS.
+    items = root.findall("./channel/item")[:HEADLINES_PER_FEED]
+    for item in items:
+        title_el = item.find("title")
+        link_el = item.find("link")
+        date_el = item.find("pubDate")
+        title = (title_el.text or "").strip() if title_el is not None else ""
+        link = (link_el.text or "").strip() if link_el is not None else ""
+        if not title or not link:
+            continue
+        published = _parse_rss_date(date_el.text if date_el is not None else None)
+        out.append({
+            "source": source,
+            "title": title,
+            "url": link,
+            "published": published.isoformat() if published else None,
+            "_sort_key": published.timestamp() if published else 0,
+        })
+    return out
+
+
+def fetch_headlines():
+    """Most recent headlines merged across curated RSS feeds. One slow or
+    dead feed shouldn't blank the whole section — each feed fails on its
+    own and the rest still render."""
+    all_items = []
+    for source, url in HEADLINE_FEEDS:
+        all_items.extend(_fetch_one_feed(source, url))
+
+    all_items.sort(key=lambda h: h["_sort_key"], reverse=True)
+    for h in all_items:
+        del h["_sort_key"]
+    return all_items[:HEADLINES_TOTAL]
+
+
 def build_snapshot():
     return {
         "generated_at": int(time.time()),
         "kalshi": fetch_kalshi(),
         "polymarket": fetch_polymarket(),
         "fx": fetch_fx(),
+        "headlines": fetch_headlines(),
     }
