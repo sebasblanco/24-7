@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Tape — Live Markets as News</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="masthead">
+    <div class="masthead-inner">
+      <h1>The Tape</h1>
+      <p class="tagline">What the world is actually betting on — prediction markets and currency moves, read as news.</p>
+    </div>
+    <div class="status-line">
+      <span id="statusDot" class="status-dot" aria-hidden="true"></span>
+      <span id="statusText">Loading live data…</span>
+    </div>
+  </header>
+
+  <section class="ticker-section" aria-label="Prediction market movers">
+    <div class="ticker-head">
+      <h2>Market Pulse</h2>
+      <p class="section-sub">Live implied probabilities from Kalshi and Polymarket — scroll to see more.</p>
+    </div>
+    <div id="tickerStrip" class="ticker-strip" tabindex="0" aria-label="Scrollable list of prediction markets">
+      <div class="ticker-loading">Pulling live market data…</div>
+    </div>
+  </section>
+
+  <section class="fx-section" aria-label="Currency exchange rates">
+    <div class="fx-head">
+      <h2>Currency Exchange — Indexed to 100</h2>
+      <p class="section-sub">USD vs. five major currencies over the trailing year. Each line starts at 100 one year ago, so a move in yen and a move in pesos sit on the same scale.</p>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-toolbar">
+        <div id="fxAsOf" class="chart-asof"></div>
+        <button id="fxTableToggle" class="toggle-btn" type="button" aria-pressed="false">View as table</button>
+      </div>
+      <div id="fxChartWrap" class="viz-root">
+        <svg id="fxChart" role="img" aria-label="Indexed currency exchange chart"></svg>
+        <div id="fxTooltip" class="fx-tooltip" hidden></div>
+      </div>
+      <div id="fxLegend" class="fx-legend" aria-hidden="true"></div>
+      <div id="fxTable" class="fx-table-wrap" hidden></div>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <p>
+      Data: <a href="https://kalshi.com" target="_blank" rel="noopener">Kalshi</a> ·
+      <a href="https://polymarket.com" target="_blank" rel="noopener">Polymarket</a> ·
+      <a href="https://frankfurter.dev" target="_blank" rel="noopener">Frankfurter (ECB rates)</a>.
+      Prediction-market prices are not forecasts — they're what traders are willing to pay, which can be wrong.
+    </p>
+    <p id="generatedAt" class="muted"></p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

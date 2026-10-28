@@ -1,0 +1,273 @@
+/* ---------------------------------------------------------------------
+   The Tape — design tokens
+   Light is the base; dark overrides under both the OS media query and an
+   explicit [data-theme="dark"] toggle (none wired yet, tokens future-proof it).
+   Categorical palette = dataviz skill default, slots 1-5, validated via
+   scripts/validate_palette.js (adjacent-pair line-chart use, both modes PASS).
+--------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+  --surface-0:      #f6f5f2;   /* page background */
+  --surface-1:      #fcfcfb;   /* card / chart surface */
+  --surface-2:      #eeece6;   /* ticker item background */
+  --border:         #ddd9d0;
+  --text-primary:   #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted:     #85837c;
+
+  --series-1: #2a78d6; /* blue   - EUR */
+  --series-2: #eb6834; /* orange - JPY */
+  --series-3: #1baf7a; /* aqua   - MXN */
+  --series-4: #eda100; /* yellow - GBP */
+  --series-5: #e87ba4; /* magenta- CNY */
+
+  --good:  #0ca30c;
+  --bad:   #d03b3b;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface-0:      #121210;
+    --surface-1:      #1a1a19;
+    --surface-2:      #232220;
+    --border:         #343330;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #8b897f;
+
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+
+    --good: #1bc21b;
+    --bad:  #e66767;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0:      #121210;
+  --surface-1:      #1a1a19;
+  --surface-2:      #232220;
+  --border:         #343330;
+  --text-primary:   #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted:     #8b897f;
+
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+
+  --good: #1bc21b;
+  --bad:  #e66767;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--surface-0);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--series-1); }
+
+.muted { color: var(--text-muted); font-size: 0.85rem; }
+
+/* ---------------------------- Masthead ------------------------------- */
+.masthead {
+  padding: 28px 20px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.masthead-inner { max-width: 1100px; margin: 0 auto; }
+.masthead h1 {
+  font-family: var(--font-mono);
+  font-size: clamp(1.8rem, 5vw, 2.6rem);
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
+}
+.tagline {
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 60ch;
+  font-size: 0.98rem;
+}
+.status-line {
+  max-width: 1100px;
+  margin: 14px auto 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--text-muted);
+}
+.status-dot.live { background: var(--good); }
+.status-dot.stale { background: var(--bad); }
+
+/* ---------------------------- Ticker ---------------------------------- */
+.ticker-section { padding: 22px 20px; max-width: 1100px; margin: 0 auto; }
+.ticker-head h2 { margin: 0 0 2px; font-size: 1.15rem; }
+.section-sub { color: var(--text-secondary); margin: 0 0 14px; font-size: 0.9rem; max-width: 65ch; }
+
+.ticker-strip {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding-bottom: 6px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.ticker-strip:focus-visible { outline: 2px solid var(--series-1); outline-offset: 2px; }
+
+.ticker-item {
+  scroll-snap-align: start;
+  flex: 0 0 auto;
+  width: 240px;
+  background: var(--surface-1);
+  padding: 12px 14px;
+  border-right: 1px solid var(--border);
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+.ticker-item:hover, .ticker-item:focus-visible { background: var(--surface-2); }
+
+.ticker-source {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.ticker-title {
+  font-size: 0.85rem;
+  line-height: 1.3;
+  margin: 4px 0 10px;
+  min-height: 2.6em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ticker-stats {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+}
+.ticker-prob { font-size: 1.3rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ticker-change { font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+.ticker-change.up { color: var(--good); }
+.ticker-change.down { color: var(--bad); }
+.ticker-change.flat { color: var(--text-muted); }
+.ticker-vol { font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; }
+.ticker-loading { padding: 20px; color: var(--text-muted); font-size: 0.9rem; }
+
+/* ----------------------------- FX chart -------------------------------- */
+.fx-section { padding: 10px 20px 36px; max-width: 1100px; margin: 0 auto; }
+.fx-head h2 { margin: 0 0 2px; font-size: 1.15rem; }
+
+.chart-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
+.chart-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.chart-asof { font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono); }
+.toggle-btn {
+  font-size: 16px;
+  padding: 8px 14px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.toggle-btn:hover { background: var(--border); }
+
+.viz-root { position: relative; width: 100%; }
+#fxChart { width: 100%; height: auto; display: block; overflow: visible; }
+
+.fx-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+  transform: translate(-50%, -110%);
+  white-space: nowrap;
+  z-index: 5;
+}
+.fx-tooltip .tt-date { color: var(--text-muted); font-family: var(--font-mono); margin-bottom: 4px; }
+.fx-tooltip .tt-row { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
+.fx-tooltip .tt-key { width: 12px; height: 2px; display: inline-block; }
+.fx-tooltip .tt-val { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 600; margin-left: auto; }
+
+.fx-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.fx-legend-item { display: flex; align-items: center; gap: 6px; }
+.fx-legend-swatch { width: 14px; height: 2px; display: inline-block; border-radius: 2px; }
+
+.fx-table-wrap { margin-top: 14px; overflow-x: auto; }
+.fx-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.fx-table th, .fx-table td {
+  text-align: right;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+.fx-table th:first-child, .fx-table td:first-child { text-align: left; }
+.fx-table th { color: var(--text-muted); font-weight: 500; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* ----------------------------- Footer ---------------------------------- */
+.site-footer {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px 20px 50px;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* ----------------------------- Mobile ----------------------------------- */
+@media (max-width: 480px) {
+  .ticker-item { width: 190px; }
+  .masthead { padding: 22px 16px 14px; }
+  .ticker-section, .fx-section, .site-footer { padding-left: 16px; padding-right: 16px; }
+  .chart-card { padding: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { scroll-behavior: auto !important; }
+}

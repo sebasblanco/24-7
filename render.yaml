@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: the-tape
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn server:app --timeout 60
